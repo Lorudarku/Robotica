@@ -1,8 +1,8 @@
 #pragma config(StandardModel, "EV3_REMBOT")
 
 ///// VARIABLES GLOBALES
-int sensorMinDistance = 10;
-int robotSpeed = 20*5;
+int sensorMinDistance = 10; //Distancia minima del sensor de ultrasonidos
+int robotSpeed = 20; //Velocdidad del robot
 
 
 task main()
