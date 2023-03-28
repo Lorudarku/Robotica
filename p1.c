@@ -43,7 +43,7 @@ task acercarseLuz(){
 		luz = getColorAmbient(colorSensor);
 		if(luz > luzUmbral){
 			semaphoreLock(sem12);
-			if (bDoesTaskOwnSemaphore(sem12)){ //Si no se est� escapando
+			if (bDoesTaskOwnSemaphore(sem12)){ //Si no se esta escapando
 				if(bDoesTaskOwnSemaphore(sem23)) {semaphoreUnlock(sem23);} //Si siguiendo luz: no seguir
 					writeDebugStreamLine("luz: %d,  luzUmbral:%d\n", luz, luzUmbral);
 					semaphoreLock(sem23); //Seguir luz
@@ -125,7 +125,7 @@ task seguirPared(){
 
 			if (dist>25 && pared){
 				semaphoreLock(sem34); //Seguir pared
-					resetGyro(gyrosSensor);
+					resetGyro(gyroSensor);
 					repeatUntil(getGyroDegrees(gyroSensor) <= -5)
 					{
 						setMotorSpeed(leftMotor, 40);
