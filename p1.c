@@ -13,7 +13,7 @@ int robotSpeed = 60; //Velocdidad del robot
 TSemaphore sem12, sem23, sem34;
 
 /*
-Se acerca a una pared y cuando está cerca reduce la velcidad de forma progresiva
+Se acerca a una pared y cuando esta cerca reduce la velocidad de forma progresiva
 */
 task acercarsePared(){
 	while(true){
@@ -33,6 +33,9 @@ task acercarsePared(){
 	}
 }
 
+/*
+Si la medida de luz es mayor que el umbral, se acerca a la luz
+*/
 task acercarseLuz(){
 	int luzUmbral, luz;
 	luzUmbral = getColorAmbient(colorSensor)*1.5;
@@ -40,7 +43,7 @@ task acercarseLuz(){
 		luz = getColorAmbient(colorSensor);
 		if(luz > luzUmbral){
 			semaphoreLock(sem12);
-			if (bDoesTaskOwnSemaphore(sem12)){ //Si no se está escapando
+			if (bDoesTaskOwnSemaphore(sem12)){ //Si no se estï¿½ escapando
 				if(bDoesTaskOwnSemaphore(sem23)) {semaphoreUnlock(sem23);} //Si siguiendo luz: no seguir
 					writeDebugStreamLine("luz: %d,  luzUmbral:%d\n", luz, luzUmbral);
 					semaphoreLock(sem23); //Seguir luz
@@ -55,12 +58,7 @@ task acercarseLuz(){
 					while (luz <= getColorAmbient(colorSensor)){
 						luz = getColorAmbient(colorSensor);
 					}
-
-					//setMotorSpeed(leftMotor, 20);
-					//setMotorSpeed(rightMotor, 20);
-					//sleep(200);
 					semaphoreUnlock(sem23); //Dejar seguir luz
-
 			semaphoreUnlock(sem12); //Dejar libre escapando
 			} else {
 				if(!bDoesTaskOwnSemaphore(sem23)){semaphoreLock(sem23);} //Si no siguiendo luz: seguir
@@ -70,7 +68,7 @@ task acercarseLuz(){
 }
 
 /*
-
+Si se activa el sensor de contacto o se esta a menos de 5c, escapamos
 */
 task escapar(){
 	while(true){
@@ -91,7 +89,6 @@ task escapar(){
 					setMotorSpeed(leftMotor, 20);
 					setMotorSpeed(rightMotor, -20);
 				}
-				//stopAllMotors();
 				resetGyro(gyroSensor);
 				semaphoreUnlock(sem12); //Dejar escapar
 			}
@@ -99,6 +96,9 @@ task escapar(){
 	}
 }
 
+/*
+Sigue la pared haciendo semicirculos
+*/
 task seguirPared(){
 	bool pared = false;
 	while(true){
@@ -119,19 +119,19 @@ task seguirPared(){
 						setMotorSpeed(leftMotor, 25);
 						setMotorSpeed(rightMotor, -25);
 					}
-					resetGyro(S2);
+					resetGyro(gyroSensor);
 				semaphoreUnlock(sem34); //Dejar seguir pared
 			}
 
 			if (dist>25 && pared){
 				semaphoreLock(sem34); //Seguir pared
-					resetGyro(S2);
-					repeatUntil(getGyroDegrees(S2) <= -5)
+					resetGyro(gyrosSensor);
+					repeatUntil(getGyroDegrees(gyroSensor) <= -5)
 					{
 						setMotorSpeed(leftMotor, 40);
 						setMotorSpeed(rightMotor, 60);
 					}
-					resetGyro(S2);
+					resetGyro(gyroSensor);
 				semaphoreUnlock(sem34); //Dejar seguir pared
 			}
 			semaphoreUnlock(sem23); //Dejar libre seguir luz
@@ -151,9 +151,6 @@ task main()
 	luz=getColorAmbient(colorSensor);
 	sleep(1000);
 	luzUmbral=getColorAmbient(colorSensor)* 15;
-
-
-
 
 	startTask(escapar);
 		startTask(acercarseLuz);
