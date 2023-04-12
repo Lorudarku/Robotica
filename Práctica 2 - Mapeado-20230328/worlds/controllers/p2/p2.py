@@ -1,5 +1,11 @@
 from controller import Robot, Motor, DistanceSensor
+import os
+import sys
+os.environ["WEBOTS_HOME"] = "C:\\Program Files\\Webots"
+os.environ["PYTHONPATH"] = "add ${WEBOTS_HOME}\\lib\\controller\\python"
+os.environ["PYTHONIOENCODING"] = "UTF-8"
 
+# Constants
 CRUISE_SPEED = 25
 MAX_SPEED = 47.6
 
@@ -18,8 +24,8 @@ encoderR.enable(TIME_STEP)
 
 leftWheel.setPosition(0)
 rightWheel.setPosition(0)
-leftWheel.setVelocity(0)
-rightWheel.setVelocity(0)
+leftWheel.setVelocity(20)
+rightWheel.setVelocity(20)
 
 posL = encoderL.getValue()
 posR = encoderR.getValue()
