@@ -35,12 +35,12 @@ INFRARED_SENSORS_NAMES = [
 ]
 
 DISTANCIA_PARED = 150
-#GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
-GIRO = 4.53
+GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
-mapa = np.zeros((14,14))
-posMap = [1,1]
-nextPos = [0,0]
+MARGEN_ERROR = 0.01
+#mapa = np.zeros((14,14))
+#posMap = [1,1]
+#nextPos = [0,0]
 #orientacionX = 1
 #orientacionY = 0
 
@@ -134,45 +134,47 @@ def process_image_rgb(camera):
             # TODO: Procesar el pixel (x,y) de la imagen.
             # ...
 
-def andar(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY):
+def andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY):
     print("ANDAR")
     #posMap = [posMap[0] + orientacionY, posMap[1] + orientacionX]
     posMap[0]=posMap[0] + orientacionY
     posMap[1]=posMap[1] + orientacionX
     nextPos[0]=posL.getValue()+AVANCE
     nextPos[1]=posR.getValue()+AVANCE
-    leftWheel.setPosition(nextPos[0]+1)
-    rightWheel.setPosition(nextPos[1]+1)
+    leftWheel.setPosition(nextPos[0])
+    rightWheel.setPosition(nextPos[1])
     leftWheel.setVelocity(CRUISE_SPEED)
     rightWheel.setVelocity(CRUISE_SPEED)
+    return posMap, nextPos
 
-def girarDerecha(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY):
+def girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY):
     print("DERECHA")
     aux = orientacionX
     orientacionX = orientacionY
     orientacionY = -aux
     nextPos[0]=posL.getValue()+GIRO
     nextPos[1]=posR.getValue()-GIRO
-    leftWheel.setPosition(nextPos[0]+1)
-    rightWheel.setPosition(nextPos[1]+1)
+    leftWheel.setPosition(nextPos[0])
+    rightWheel.setPosition(nextPos[1])
     leftWheel.setVelocity(CRUISE_SPEED)
     rightWheel.setVelocity(CRUISE_SPEED)
-    return orientacionX, orientacionY
+    return nextPos, orientacionX, orientacionY
 
-def girarIzquierda(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY):
+def girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY):
     print("IZQUIERDA")
     aux = orientacionY
     orientacionY = orientacionX
     orientacionX = -aux
     nextPos[0]=posL.getValue()-GIRO
     nextPos[1]=posR.getValue()+GIRO
-    leftWheel.setPosition(nextPos[0]+1)
-    rightWheel.setPosition(nextPos[1]+1)
+    leftWheel.setPosition(nextPos[0])
+    rightWheel.setPosition(nextPos[1])
     leftWheel.setVelocity(CRUISE_SPEED)
     rightWheel.setVelocity(CRUISE_SPEED)
-    return orientacionX, orientacionY
+    return nextPos, orientacionX, orientacionY
 
-def crearMapa(robot, leftWheel, rightWheel, irSensorList, posL, posR, esquina, orientacionX, orientacionY):
+# añadir variable bool para saber si se esta creando mapa o no
+def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY):
     # 1-Left, 3-Front, 5-Right, 7-Rear
     
     """"
@@ -182,17 +184,18 @@ def crearMapa(robot, leftWheel, rightWheel, irSensorList, posL, posR, esquina, o
     print("Rear " + str(irSensorList[7].getValue()))
     """
 
-    if (irSensorList[1].getValue() < 150 and mapa[posMap[0]+orientacionY,posMap[1]-orientacionX] == 0 and (not esquina)):
-        orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY)
-        return 0, True, orientacionX, orientacionY
+    if (irSensorList[1].getValue() < DISTANCIA_PARED and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0 and (not esquina)):
+        print("AQUI")
+        nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return 0, mapa, posMap, nextPos, True, orientacionX, orientacionY
     else:
-        if ((not esquina) and mapa[posMap[0]+orientacionY,posMap[1]-orientacionX] == 0):
-            mapa[posMap[0]+orientacionY,posMap[1]-orientacionX] = 1
-        if (irSensorList[3].getValue() < 150):
-            andar(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY)
+        if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
+            mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1
+        if (irSensorList[3].getValue() < DISTANCIA_PARED):
+            posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
         else:
-            orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, orientacionX, orientacionY)
-    return 0, False, orientacionX, orientacionY
+            nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+    return 0, mapa, posMap, nextPos, False, orientacionX, orientacionY
 
 
 
@@ -207,21 +210,26 @@ def main():
     # ...
 
     estado = 0
+    mapa = np.zeros((14,14))
+    posMap = [1,1]
+    nextPos = [0,0]
     esquina = False
     orientacionX = 1
     orientacionY = 0
     
     while(robot.step(TIME_STEP) != -1):
+
+        print(posL.getValue(), posR.getValue(), nextPos[0], nextPos[1])
         
-        if (posL.getValue() >= nextPos[0] and posR.getValue() >= nextPos[1]):
+        if (posL.getValue() >= (nextPos[0] - MARGEN_ERROR) and posR.getValue() >= (nextPos[1] - MARGEN_ERROR)):
             leftWheel.setVelocity(0)
             rightWheel.setVelocity(0)
             time.sleep(0.5)
             if (estado == 0):
-                estado, esquina, orientacionX, orientacionY = crearMapa(robot, leftWheel, rightWheel, irSensorList, posL, posR, esquina, orientacionX, orientacionY)
+                estado, mapa, posMap, nextPos, esquina, orientacionX, orientacionY = crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY)
         
-        print(mapa)
-        print(posMap)
+        #print(mapa)
+        #print(posMap)
 
     # 1- Crear map
     # 1.1 Si pared de frente girar
