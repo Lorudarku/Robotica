@@ -34,15 +34,16 @@ INFRARED_SENSORS_NAMES = [
     "rear infrared sensor",
 ]
 
-DISTANCIA_PARED = 150
+DISTANCIA_PARED = 140
 GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
 MARGEN_ERROR = 0.01
-#mapa = np.zeros((14,14))
-#posMap = [1,1]
-#nextPos = [0,0]
-#orientacionX = 1
-#orientacionY = 0
+
+LISTA_ESTADOS = [
+    "CREAR_MAPA",
+    "PATRULLAR",
+    "VOLVER_INICIO",
+]
 
 def enable_distance_sensors(robot, timeStep, sensorNames):
     """
@@ -184,10 +185,16 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nex
     print("Rear " + str(irSensorList[7].getValue()))
     """
 
+    # ORIENTARSE HACIA LA PARED
+    
+    # Pared izquierda = Orientado
+    # Pared de frente = Girar derecha
+    # Pared derecha = Girar derecha
+    # Pared atras = Girar izquierda
+
     if (irSensorList[1].getValue() < DISTANCIA_PARED and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0 and (not esquina)):
-        print("AQUI")
         nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-        return 0, mapa, posMap, nextPos, True, orientacionX, orientacionY
+        return LISTA_ESTADOS[0], mapa, posMap, nextPos, True, orientacionX, orientacionY
     else:
         if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
             mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1
@@ -195,7 +202,7 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nex
             posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
         else:
             nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-    return 0, mapa, posMap, nextPos, False, orientacionX, orientacionY
+    return LISTA_ESTADOS[0], mapa, posMap, nextPos, False, orientacionX, orientacionY
 
 
 
@@ -209,7 +216,7 @@ def main():
     # TODO Implementar arquitectura de control del robot.
     # ...
 
-    estado = 0
+    estado = LISTA_ESTADOS[0]
     mapa = np.zeros((14,14))
     posMap = [1,1]
     nextPos = [0,0]
@@ -219,24 +226,17 @@ def main():
     
     while(robot.step(TIME_STEP) != -1):
 
-        print(posL.getValue(), posR.getValue(), nextPos[0], nextPos[1])
+        #print(posL.getValue(), posR.getValue(), nextPos[0], nextPos[1])
         
         if (posL.getValue() >= (nextPos[0] - MARGEN_ERROR) and posR.getValue() >= (nextPos[1] - MARGEN_ERROR)):
             leftWheel.setVelocity(0)
             rightWheel.setVelocity(0)
             time.sleep(0.5)
-            if (estado == 0):
+            if (estado == LISTA_ESTADOS[0]):
                 estado, mapa, posMap, nextPos, esquina, orientacionX, orientacionY = crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY)
         
         #print(mapa)
         #print(posMap)
-
-    # 1- Crear map
-    # 1.1 Si pared de frente girar
-    # 1.2 Andar una casilla
-    # 1.3 Comprobar si casilla a un lado
-    # 1.4 
-    # 2- Patrullar
 
 
 if __name__ == "__main__":
