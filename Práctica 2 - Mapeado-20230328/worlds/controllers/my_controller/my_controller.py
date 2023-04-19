@@ -34,12 +34,13 @@ INFRARED_SENSORS_NAMES = [
     "rear infrared sensor",
 ]
 
-DISTANCIA_PARED = 140
+DISTANCIA_PARED = 150
 GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
 MARGEN_ERROR = 0.01
 
 LISTA_ESTADOS = [
+    "ORIENTARSE",
     "CREAR_MAPA",
     "PATRULLAR",
     "VOLVER_INICIO",
@@ -120,10 +121,14 @@ def process_image_rgb(camera):
     (ej. hacer una detección de color en HSV).
     """
 
+    yellowCounter = 0
+
     W = camera.getWidth()
     H = camera.getHeight()
 
     image = camera.getImage()
+
+    pixels = np.zeros((W, H, 3))
 
     # Si es suficiente, podríamos procesar solo una parte de la imagen para optimizar .
     for x in range(0, W):
@@ -132,8 +137,17 @@ def process_image_rgb(camera):
             g = camera.imageGetGreen(image, W, x, y)
             r = camera.imageGetRed(image, W, x, y)
 
-            # TODO: Procesar el pixel (x,y) de la imagen.
-            # ...
+            if r >= 220 and g >= 220 and b >= 60:
+                yellowCounter += 1
+            pixels[x, y] = [b, g, r]
+
+    
+    #print(pixels[190,120])
+
+    if yellowCounter >= H*W/2:
+        return True
+    else:
+        return False
 
 def andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY):
     print("ANDAR")
@@ -174,16 +188,8 @@ def girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, ori
     rightWheel.setVelocity(CRUISE_SPEED)
     return nextPos, orientacionX, orientacionY
 
-# añadir variable bool para saber si se esta creando mapa o no
-def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY):
+def orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orientacionX, orientacionY):
     # 1-Left, 3-Front, 5-Right, 7-Rear
-    
-    """"
-    print("Left " + str(irSensorList[1].getValue()))
-    print("Front " + str(irSensorList[3].getValue()))
-    print("Right " + str(irSensorList[5].getValue()))
-    print("Rear " + str(irSensorList[7].getValue()))
-    """
 
     # ORIENTARSE HACIA LA PARED
     
@@ -192,9 +198,36 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nex
     # Pared derecha = Girar derecha
     # Pared atras = Girar izquierda
 
-    if (irSensorList[1].getValue() < DISTANCIA_PARED and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0 and (not esquina)):
+    print("ORIENTARSE")
+    if (irSensorList[1].getValue() >= DISTANCIA_PARED):
+        return LISTA_ESTADOS[1], nextPos, orientacionX, orientacionY
+    elif (irSensorList[3].getValue() >= DISTANCIA_PARED):
+        nextPos,orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
+    elif (irSensorList[7].getValue() >= DISTANCIA_PARED):
+        nextPos,orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
+    elif (irSensorList[5].getValue() >= DISTANCIA_PARED):
+        nextPos,orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
+    else:
+        return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
+
+
+# añadir variable bool para saber si se esta creando mapa o no
+def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY):
+    # 1-Left, 3-Front, 5-Right, 7-Rear
+    
+    """
+    print("Left " + str(irSensorList[1].getValue()))
+    print("Front " + str(irSensorList[3].getValue()))
+    print("Right " + str(irSensorList[5].getValue()))
+    print("Rear " + str(irSensorList[7].getValue()))
+    """
+
+    if (irSensorList[1].getValue() < DISTANCIA_PARED and (not esquina)):
         nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-        return LISTA_ESTADOS[0], mapa, posMap, nextPos, True, orientacionX, orientacionY
+        return LISTA_ESTADOS[1], mapa, posMap, nextPos, True, orientacionX, orientacionY
     else:
         if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
             mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1
@@ -202,7 +235,7 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nex
             posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
         else:
             nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-    return LISTA_ESTADOS[0], mapa, posMap, nextPos, False, orientacionX, orientacionY
+    return LISTA_ESTADOS[1], mapa, posMap, nextPos, False, orientacionX, orientacionY
 
 
 
@@ -223,17 +256,25 @@ def main():
     esquina = False
     orientacionX = 1
     orientacionY = 0
+    amarillo = False
     
     while(robot.step(TIME_STEP) != -1):
 
         #print(posL.getValue(), posR.getValue(), nextPos[0], nextPos[1])
+        #print("Estado: " + str(estado))
         
         if (posL.getValue() >= (nextPos[0] - MARGEN_ERROR) and posR.getValue() >= (nextPos[1] - MARGEN_ERROR)):
+            amarillo = process_image_rgb(camera)
             leftWheel.setVelocity(0)
             rightWheel.setVelocity(0)
             time.sleep(0.5)
             if (estado == LISTA_ESTADOS[0]):
+                estado, nextPos, orientacionX, orientacionY = orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orientacionX, orientacionY)
+            elif (estado == LISTA_ESTADOS[1]):
                 estado, mapa, posMap, nextPos, esquina, orientacionX, orientacionY = crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY)
+            elif (estado == LISTA_ESTADOS[2]):
+                if (amarillo):
+                    print("AMARILLO")
         
         #print(mapa)
         #print(posMap)
