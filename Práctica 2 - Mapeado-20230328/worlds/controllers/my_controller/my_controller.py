@@ -230,23 +230,30 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, mapaCreado,
 
 
 
-def patrullar(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY):
+def patrullar(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY, comprobarPared):
 
     mapa[posMap[0],posMap[1]] = 0
 
-    if (irSensorList[1].getValue() < DISTANCIA_PARED and (not esquina)):
-        nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-        return LISTA_ESTADOS[2], mapa, posMap, nextPos, True, orientacionX, orientacionY
-    else:
-        if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
-            mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1 # Pared
-        if (irSensorList[3].getValue() < DISTANCIA_PARED):
-            posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
+    if (comprobarPared == 0):
+        if (irSensorList[1].getValue() < DISTANCIA_PARED and (not esquina)):
+            nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+            return LISTA_ESTADOS[2], mapa, posMap, nextPos, True, orientacionX, orientacionY, 0
         else:
-            nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
-            
-    return LISTA_ESTADOS[2], mapa, posMap, nextPos, False, orientacionX, orientacionY
+            if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
+                mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1 # Pared
+            if (irSensorList[3].getValue() < DISTANCIA_PARED):
+                posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
+                return LISTA_ESTADOS[2], mapa, posMap, nextPos, False, orientacionX, orientacionY, 1
+            else:
+                nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+    elif (comprobarPared == 1):
+        nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return LISTA_ESTADOS[2], mapa, posMap, nextPos, False, orientacionX, orientacionY, 2
+    elif (comprobarPared == 2):
+        nextPos, orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
+        return LISTA_ESTADOS[2], mapa, posMap, nextPos, False, orientacionX, orientacionY, 0
 
+    return LISTA_ESTADOS[2], mapa, posMap, nextPos, False, orientacionX, orientacionY, 0
 
 
 #Implementacion de la clase A*
@@ -377,6 +384,7 @@ def main():
     mapaCreado = 0
     amarillo = False
     actualizarRuta = True
+    comprobarPared = 0
 
     while(robot.step(TIME_STEP) != -1):
         
@@ -400,7 +408,7 @@ def main():
                     camino = a_estrella(posMap, [1,1], mapa)
                     estado = LISTA_ESTADOS[3]
                 else:
-                    estado, mapa, posMap, nextPos, esquina, orientacionX, orientacionY = patrullar(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY)
+                    estado, mapa, posMap, nextPos, esquina, orientacionX, orientacionY, comprobarPared = patrullar(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY, comprobarPared)
             elif (estado == LISTA_ESTADOS[3]):
                 if (actualizarRuta):
                     #Sacamos el primer elemento de la lista
