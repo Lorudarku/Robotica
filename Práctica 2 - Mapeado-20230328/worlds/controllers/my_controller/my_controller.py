@@ -146,8 +146,11 @@ def process_image_rgb(camera):
             #pixels[x, y] = [b, g, r]
  
     # pixeles totales 360960
-    print(yellowCounter)
-    if yellowCounter >= H*W/3:
+    umbral = H*W/3
+    print("Yellow pixels: ", yellowCounter)
+    print("Umbral: ", umbral)
+    
+    if yellowCounter >= umbral:
         return True
     else:
         return False
