@@ -14,7 +14,7 @@ from queue import PriorityQueue
 import time  # Si queremos utilizar time.sleep().
 import numpy as np  # Si queremos utilizar numpy para procesar la imagen.
 import math
-import cv2  # Si queremos utilizar OpenCV para procesar la imagen.
+#import cv2  # Si queremos utilizar OpenCV para procesar la imagen.
 
 
 # Máxima velocidad de las ruedas soportada por el robot (khepera4).
@@ -39,7 +39,7 @@ INFRARED_SENSORS_NAMES = [
 DISTANCIA_PARED = 150
 GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
-MARGEN_ERROR = 0.01
+MARGEN_ERROR = 0.001
 
 LISTA_ESTADOS = [
     "ORIENTARSE",
@@ -139,15 +139,15 @@ def process_image_rgb(camera):
             g = camera.imageGetGreen(image, W, x, y)
             r = camera.imageGetRed(image, W, x, y)
 
-            if r >= 200 and g >= 180 and b <= 100:
+            if r >= 180 and g >= 180 and b <= 100:
             #if r >= 220 and g >= 220 and b >= 60:
                 yellowCounter += 1
 
             #pixels[x, y] = [b, g, r]
-
-    #print(pixels[190,120])
-    
-    if yellowCounter >= H*W/2.5:
+ 
+    # pixeles totales 360960
+    print(yellowCounter)
+    if yellowCounter >= H*W/3:
         return True
     else:
         return False
@@ -265,6 +265,7 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, mapaCreado,
     print("Right " + str(irSensorList[5].getValue()))
     print("Rear " + str(irSensorList[7].getValue()))
     """
+    
     if (posMap == [1,1]):
         mapaCreado+=1
         if (mapaCreado == 2):
