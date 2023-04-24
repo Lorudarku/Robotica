@@ -1,12 +1,3 @@
-"""
-Robótica
-Grado en Ingeniería Informática
-Universidade da Coruña
-Author: Alejandro Paz
-
-Ejemplo de uso de sensores/actuadores básicos y cámara con robot Khepera4 en Webots.
-"""
-
 from controller import Robot  # Módulo de Webots para el control el robot.
 from controller import Camera  # Módulo de Webots para el control de la cámara.
 
@@ -107,9 +98,6 @@ def init_devices(timeStep):
     posL.enable(timeStep)
     posR.enable(timeStep)
 
-    # TODO: Obtener y activar otros dispositivos necesarios.
-    # ...
-
     return robot, leftWheel, rightWheel, irSensorList, posL, posR, camera
 
 
@@ -130,8 +118,6 @@ def process_image_rgb(camera):
 
     image = camera.getImage()
 
-    #pixels = np.zeros((W, H, 3))
-
     # Si es suficiente, podríamos procesar solo una parte de la imagen para optimizar .
     for x in range(0, W):
         for y in range(0, H):
@@ -139,63 +125,18 @@ def process_image_rgb(camera):
             g = camera.imageGetGreen(image, W, x, y)
             r = camera.imageGetRed(image, W, x, y)
 
-            #if r >= 180 and g >= 180 and b <= 100:
             if r >= 160 and g >= 160 and b <= 100:
                 yellowCounter += 1
-
-            #pixels[x, y] = [b, g, r]
  
     # pixeles totales 360960
     umbral = H*W/3
     print("Yellow pixels: ", yellowCounter)
     print("Umbral: ", umbral)
     
-    if yellowCounter >= umbral:
-        return True
-    else:
-        return False
-
-""" 
-def process_image_rgb(camera):
-    ####
-    #Procesamiento del último frame capturado por el dispositivo de la cámara
-    #(según el time_step establecido para la cámara).
-    #¡ATENCIÓN!: Esta función no es thread-safe, ya que accede al buffer en memoria de la cámara.
-    #
-    #RECOMENDACIÓN: utilizar OpenCV para procesar más eficientemente la imagen
-    #(ej. hacer una detección de color en HSV).
-    ####
-
-    yellowCounter = 0
-
-    W = camera.getWidth()
-    H = camera.getHeight()
-
-    image = camera.getImage()
-
-    image = np.frombuffer(image, np.uint8).reshape((H, W, 4))
-    
-    # Convertir la imagen a formato HSV para facilitar la detección de color
-    hsv_image = cv2.cvtColor(image, cv2.COLOR_RGB2HSV)
-    # Definir los rangos de color para el amarillo en formato HSV
-    lower_yellow = np.array([25, 100, 100])
-    upper_yellow = np.array([35, 255, 255])
-
-    # Aplicar la máscara para detectar el color amarillo
-    mask = cv2.inRange(hsv_image, lower_yellow, upper_yellow)
-    # Contar los píxeles que cumplen la condición
-    yellowCounter = np.count_nonzero(mask)
-    print(yellowCounter)
-
-    if yellowCounter >= H*W/2:
-        return True
-    else:
-        return False
- """
+    return yellowCounter >= umbral
 
 def andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY):
     print("ANDAR")
-    #posMap = [posMap[0] + orientacionY, posMap[1] + orientacionX]
     posMap[0]=posMap[0] + orientacionY
     posMap[1]=posMap[1] + orientacionX
     nextPos[0]=posL.getValue()+AVANCE
@@ -234,11 +175,9 @@ def girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, ori
 
 def orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orientacionX, orientacionY):
     # 1-Left, 3-Front, 5-Right, 7-Rear
-
-    # ORIENTARSE HACIA LA PARED
     
-    # Pared izquierda = Orientado
     # Pared de frente = Girar derecha
+    # Pared izquierda = Orientado
     # Pared derecha = Girar derecha
     # Pared atras = Girar izquierda
 
@@ -258,7 +197,6 @@ def orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orienta
         return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
 
 
-# añadir variable bool para saber si se esta creando mapa o no
 def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, mapaCreado, posMap, nextPos, esquina, orientacionX, orientacionY):
     # 1-Left, 3-Front, 5-Right, 7-Rear
     
@@ -429,9 +367,6 @@ def main():
     # Ejecutamos una sincronización para tener disponible el primer frame de la cámara.
     robot.step(TIME_STEP)
 
-    # TODO Implementar arquitectura de control del robot.
-    # ...
-
     estado = LISTA_ESTADOS[0]
     mapa = np.zeros((14,14))
     posMap = [1,1]
@@ -444,9 +379,6 @@ def main():
     actualizarRuta = True
 
     while(robot.step(TIME_STEP) != -1):
-
-        #print(posL.getValue(), posR.getValue(), nextPos[0], nextPos[1])
-        #print("Estado: " + str(estado))
         
         if (posL.getValue() >= (nextPos[0] - MARGEN_ERROR) and posR.getValue() >= (nextPos[1] - MARGEN_ERROR)):
             print(mapa)
@@ -478,10 +410,6 @@ def main():
                 if (posMap == [1,1]):
                     print("fin")
                     break
-    
-        #print(mapa)
-        #print(posMap)
-        #print(estado)
     
 if __name__ == "__main__":
     main()
