@@ -30,7 +30,7 @@ INFRARED_SENSORS_NAMES = [
 DISTANCIA_PARED = 150
 GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
-MARGEN_ERROR = 0.005
+MARGEN_ERROR = 0.0035
 
 LISTA_ESTADOS = [
     "ORIENTARSE",
@@ -129,7 +129,7 @@ def process_image_rgb(camera):
                 yellowCounter += 1
  
     # pixeles totales 360960
-    umbral = H*W/3
+    umbral = H*W/4
     print("Yellow pixels: ", yellowCounter)
     print("Umbral: ", umbral)
     
