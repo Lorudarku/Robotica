@@ -39,7 +39,7 @@ INFRARED_SENSORS_NAMES = [
 DISTANCIA_PARED = 150
 GIRO = (90 * math.pi / 180) * (108.29 / 2) / 21
 AVANCE = 250 / 21
-MARGEN_ERROR = 0.001
+MARGEN_ERROR = 0.005
 
 LISTA_ESTADOS = [
     "ORIENTARSE",
@@ -139,8 +139,8 @@ def process_image_rgb(camera):
             g = camera.imageGetGreen(image, W, x, y)
             r = camera.imageGetRed(image, W, x, y)
 
-            if r >= 180 and g >= 180 and b <= 100:
-            #if r >= 220 and g >= 220 and b >= 60:
+            #if r >= 180 and g >= 180 and b <= 100:
+            if r >= 160 and g >= 160 and b <= 100:
                 yellowCounter += 1
 
             #pixels[x, y] = [b, g, r]
@@ -243,11 +243,11 @@ def orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orienta
     # Pared atras = Girar izquierda
 
     print("ORIENTARSE")
-    if (irSensorList[1].getValue() >= DISTANCIA_PARED):
-        return LISTA_ESTADOS[1], nextPos, orientacionX, orientacionY
-    elif (irSensorList[3].getValue() >= DISTANCIA_PARED):
+    if (irSensorList[3].getValue() >= DISTANCIA_PARED):
         nextPos,orientacionX,orientacionY = girarDerecha(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
         return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
+    elif (irSensorList[1].getValue() >= DISTANCIA_PARED):
+        return LISTA_ESTADOS[1], nextPos, orientacionX, orientacionY
     elif (irSensorList[7].getValue() >= DISTANCIA_PARED):
         nextPos,orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
         return LISTA_ESTADOS[0], nextPos, orientacionX, orientacionY
@@ -294,10 +294,14 @@ def crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, mapaCreado,
 
 def patrullar(leftWheel, rightWheel, irSensorList, posL, posR, mapa, posMap, nextPos, esquina, orientacionX, orientacionY):
 
+    mapa[posMap[0],posMap[1]] = 0
+
     if (irSensorList[1].getValue() < DISTANCIA_PARED and (not esquina)):
         nextPos, orientacionX,orientacionY = girarIzquierda(leftWheel, rightWheel, posL, posR, nextPos, orientacionX, orientacionY)
         return LISTA_ESTADOS[2], mapa, posMap, nextPos, True, orientacionX, orientacionY
     else:
+        if ((not esquina) and mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] == 0):
+            mapa[posMap[0]+orientacionX,posMap[1]-orientacionY] = 1 # Pared
         if (irSensorList[3].getValue() < DISTANCIA_PARED):
             posMap, nextPos = andar(leftWheel, rightWheel, posL, posR, posMap, nextPos, orientacionX, orientacionY)
         else:
@@ -445,16 +449,21 @@ def main():
         #print("Estado: " + str(estado))
         
         if (posL.getValue() >= (nextPos[0] - MARGEN_ERROR) and posR.getValue() >= (nextPos[1] - MARGEN_ERROR)):
+            print(mapa)
+            print(posMap)
             leftWheel.setVelocity(0)
             rightWheel.setVelocity(0)
             time.sleep(0.5)
             if (estado == LISTA_ESTADOS[0]):
                 estado, nextPos, orientacionX, orientacionY = orientarse(leftWheel, rightWheel, irSensorList, posL, posR, nextPos, orientacionX, orientacionY)
             elif (estado == LISTA_ESTADOS[1]):
+                print(orientacionX,orientacionY)
                 estado, mapa, mapaCreado, posMap, nextPos, esquina, orientacionX, orientacionY = crearMapa(leftWheel, rightWheel, irSensorList, posL, posR, mapa, mapaCreado, posMap, nextPos, esquina, orientacionX, orientacionY)
             elif (estado == LISTA_ESTADOS[2]):
+                print(orientacionX,orientacionY)
                 amarillo = process_image_rgb(camera)
                 if (amarillo):
+                    mapa[posMap[0]+orientacionY,posMap[1]+orientacionX] = 1
                     #Planificar ruta de vuelta
                     camino = a_estrella(posMap, [1,1], mapa)
                     estado = LISTA_ESTADOS[3]
